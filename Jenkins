@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'https://github.com/ArjunReddyKorni/MyBussinessCard.git'
+        APP_NAME = 'MyBussinessCard'
+        DOCKER_IMAGE_NAME = 'mybussinesscard'
+        DOCKER_IMAGE_TAG = 'latest'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/MobileApp']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: REPO_URL]]])
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npx react-native build-android'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build Docker image
+                    docker.withRegistry('https://your-docker-registry', 'docker-credentials-id') {
+                        def customImage = docker.build("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Push Docker image to registry
+                    docker.withRegistry('https://your-docker-registry', 'docker-credentials-id') {
+                        customImage.push()
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                // Deploy the Docker image, e.g., using Docker Compose or Kubernetes
+                echo 'Deploying the React Native app using Docker...'
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up steps, if needed
+        }
+    }
+}
